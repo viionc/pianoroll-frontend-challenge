@@ -1,3 +1,9 @@
+
+
+https://github.com/viionc/pianoroll-frontend-challenge/assets/6730164/f67dda64-a2c9-4407-aa09-fe21e59f33c8
+
+
+
 # PianoRoll Frontend Task
 
 ## Introduction
