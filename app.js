@@ -9,6 +9,7 @@ class PianoRollDisplay {
         this.data = null;
         this.selectionStartPosition = null;
         this.selectionEndPosition = null;
+        this.previousColorsMap = [];
     }
 
     async loadPianoRollData() {
@@ -50,7 +51,7 @@ class PianoRollDisplay {
 
     startSelection(event, svg) {
         if (this.selectionEndPosition) {
-            this.resetSelection();
+            this.resetSelection(svg);
             return;
         }
         const svgPos = svg.getBoundingClientRect();
@@ -71,19 +72,52 @@ class PianoRollDisplay {
         const minX = Math.min(this.selectionStartPosition.x, this.selectionEndPosition.x);
         const maxY = Math.max(this.selectionStartPosition.y, this.selectionEndPosition.y);
         const maxX = Math.max(this.selectionStartPosition.x, this.selectionEndPosition.x);
-        const y = minY / svgPos.height;
-        const x = minX / svgPos.width;
-        const height = (maxY - minY) / svgPos.height;
-        const width = (maxX - minX) / svgPos.width;
+        const selectionY = minY / svgPos.height;
+        const selectionX = minX / svgPos.width;
+        const selectionHeight = (maxY - minY) / svgPos.height;
+        const selectionWidth = (maxX - minX) / svgPos.width;
         selectionRect.setAttribute("fill", "#ffe6054b");
-        selectionRect.setAttribute("x", x);
-        selectionRect.setAttribute("y", y);
-        selectionRect.setAttribute("height", height);
-        selectionRect.setAttribute("width", width);
+        selectionRect.setAttribute("x", selectionX);
+        selectionRect.setAttribute("y", selectionY);
+        selectionRect.setAttribute("height", selectionHeight);
+        selectionRect.setAttribute("width", selectionWidth);
         svg.appendChild(selectionRect);
-    }
 
-    resetSelection() {
+        const notes = Array.from(svg.children).filter((e) => e.classList.contains("note-rectangle"));
+        notes.forEach((note, index) => {
+            const x = note.x.baseVal.value;
+            const y = note.y.baseVal.value;
+            const height = note.height.baseVal.value;
+            const width = note.width.baseVal.value;
+            if (
+                this.checkIfInSelection(
+                    x,
+                    y,
+                    y + height,
+                    x + width,
+                    selectionX,
+                    selectionY,
+                    selectionY + selectionHeight,
+                    selectionX + selectionWidth
+                )
+            ) {
+                this.previousColorsMap.push(note.getAttribute("fill"));
+                note.classList.add("selected");
+                note.setAttribute("fill", "green");
+            }
+        });
+    }
+    checkIfInSelection(x, y, height, width, selectionX, selectionY, selectionHeight, selectionWidth) {
+        if (x < selectionWidth && width > selectionX && y < selectionHeight && height > selectionY) {
+            return true;
+        }
+    }
+    resetSelection(svg) {
+        const notes = Array.from(svg.children).filter((e) => e.classList.contains("selected"));
+        notes.forEach((note, index) => {
+            note.setAttribute("fill", this.previousColorsMap[index]);
+        });
+        this.previousColorsMap = [];
         document.getElementById("selection").remove();
         this.selectionEndPosition = null;
         this.selectionStartPosition = null;
