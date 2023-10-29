@@ -28,38 +28,39 @@ class PianoRollDisplay {
     }
 
     openPianoRoll(rollId) {
-        // reset main piano roll element
+        // Reset main piano roll element
         mainPianoRoll.innerHTML = "";
-        // add class to sided piano rolls that make them align vertically on the left
+        // Add class to side piano rolls that make them align vertically on the right
         sidePianoRolls.classList.add("compact");
-        // check if there is an active roll and reset its color (for green background)
+        // Check if there is an active roll and reset its color
         const activeRoll = Array.from(sidePianoRolls.children).find((e) => e.classList.contains("active"));
         activeRoll ? activeRoll.classList.remove("active") : null;
-        // get clicked roll element
+        // Get clicked roll element
         const roll = sidePianoRolls.children[rollId];
-        // clone it so it doesnt get removed from side rolls
+        // Clone it so it doesnt get removed from side rolls
         const clonedRoll = roll.cloneNode(true);
-        // make the cloned element bigger
+        // Make the cloned element bigger
         const svg = clonedRoll.querySelector("svg");
         svg.setAttribute("height", 500);
         svg.setAttribute("draggable", true);
         clonedRoll.classList.add("main");
 
-        // add class active (green background) to the clicked roll
+        // Add class active (green background) to the clicked roll
         roll.classList.add("active");
-        // append the cloned roll to main piano element
+        // Append the cloned roll to main piano element
 
         const selectedAreaText = document.createElement("div");
         selectedAreaText.id = "selectedAreaText";
         clonedRoll.appendChild(selectedAreaText);
 
-        // selection handler
+        // Selection handlers
         svg.addEventListener("mousedown", (e) => {
             this.startSelection(e, svg);
         });
         svg.addEventListener("mousemove", (e) => this.drawSelection(e, svg));
         svg.addEventListener("mouseup", (e) => this.endSelection(e, svg));
 
+        // Different handlers for phone.
         svg.addEventListener("touchstart", (e) => {
             this.isTouch = true;
             this.startSelection(e, svg);
@@ -70,24 +71,26 @@ class PianoRollDisplay {
             this.isTouch = false;
         });
 
+        // Append cloned roll to document and show it.
         mainPianoRoll.appendChild(clonedRoll);
         mainPianoRoll.classList.add("show");
     }
 
+    // Method that initializes selection.
     startSelection(event, svg) {
-        // clicking a mouse button after user stopped selecting removes the selection
+        // Reset selection area if previous selection is done
         if (this.selectingEnded) {
             this.resetSelection();
-            return;
         }
         if (this.isSelecting) return;
         this.isSelecting = true;
-        // get starting click position
 
+        // Get starting click position
         const clickedPos = this.getMousePosition(event, svg);
         this.selectionStartPosition = clickedPos;
     }
 
+    // Method that ends selection.
     endSelection(event, svg) {
         if (!this.isSelecting) return;
         this.isSelecting = false;
@@ -95,11 +98,13 @@ class PianoRollDisplay {
         if (this.isTouch && !event.touches[0]) return;
         const clickedPos = this.getMousePosition(event, svg);
         this.selectionEndPosition = clickedPos;
+        // Log area positions.
         console.log(`Starting Position: x: ${this.selectionStartPosition.x}, y: ${this.selectionStartPosition.y}`);
         console.log(`Ending Position: x: ${this.selectionEndPosition.x}, y: ${this.selectionEndPosition.y}`);
     }
 
     getMousePosition(event, svg) {
+        // MouseEvent and TouchEvent have different properties, so had to work around that.
         if (this.isTouch) {
             var {clientX, clientY} = event.touches[0];
         } else {
@@ -113,19 +118,16 @@ class PianoRollDisplay {
 
     drawSelection(event, svg) {
         if (!this.isSelecting) return;
-        // remove previous selection
         let selectionRect = document.getElementById("selection");
+        // Create selection element if it doesn't exist yet.
         if (!selectionRect) {
             selectionRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
             selectionRect.id = "selection";
             svg.appendChild(selectionRect);
         }
         const svgPos = svg.getBoundingClientRect();
-        // create new selection
-        // const selectionRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-        // selectionRect.id = "selection";
 
-        // calculate new selection area based on starting position from startSelection function and current cursor position
+        // Calculate new selection area based on starting position from startSelection function and current cursor position
         const currentPos = this.getMousePosition(event, svg);
         const minY = Math.min(this.selectionStartPosition.y, currentPos.y);
         const minX = Math.min(this.selectionStartPosition.x, currentPos.x);
@@ -135,23 +137,23 @@ class PianoRollDisplay {
         const selectionX = minX / svgPos.width;
         const selectionHeight = (maxY - minY) / svgPos.height;
         const selectionWidth = (maxX - minX) / svgPos.width;
-        // set attributes
+        // Set attributes
         selectionRect.setAttribute("fill", "#ffe6054b");
         selectionRect.setAttribute("x", selectionX);
         selectionRect.setAttribute("y", selectionY);
         selectionRect.setAttribute("height", selectionHeight);
         selectionRect.setAttribute("width", selectionWidth);
 
-        // add text information about selected area below piano roll
+        // Add text information about selected area below piano roll
         const selectedAreaText = document.getElementById("selectedAreaText");
         selectedAreaText.innerText = `Selected area: x: ${selectionX.toFixed(2)}, y: ${selectionY.toFixed(2)}, height: ${selectionHeight.toFixed(
             2
         )}, width: ${selectionWidth.toFixed(2)}.`;
 
-        // restore previous colors to notes
+        // Restore previous colors to notes
         this.resetNotesColors();
 
-        // recolor notes that are within selected area
+        // Recolor notes that are within selected area
         const notes = Array.from(svg.children).filter((e) => e.classList.contains("note-rectangle"));
         notes.forEach((note) => {
             const x = note.x.baseVal.value;
@@ -170,6 +172,7 @@ class PianoRollDisplay {
                     selectionX + selectionWidth
                 )
             ) {
+                // Keep track of colors of selected notes so we can reset them to original colors later.
                 this.previousColorsMap.push(note.getAttribute("fill"));
                 note.classList.add("selected");
                 note.setAttribute("fill", "red");
@@ -177,14 +180,14 @@ class PianoRollDisplay {
         });
     }
 
-    // function that checks if selected area and note are interesecting
+    // Method that checks if selected area and note are interesecting
     checkIfInSelection(x, y, height, width, selectionX, selectionY, selectionHeight, selectionWidth) {
         if (x < selectionWidth && width > selectionX && y < selectionHeight && height > selectionY) {
             return true;
         }
     }
 
-    // reset selection area
+    // Reset selection area
     resetSelection() {
         this.selectingEnded = false;
         this.isSelecting = false;
